@@ -63,16 +63,22 @@ async function getItemDetails(endpoint) {
 
   let description = dom(".card-body.item-card-body > :nth-child(1) > p").text().trim();
 
-  let properties = dom(
+/*  let properties = dom(
     ".container.container-ads > .row > .col-lg-6 > :nth-child(2) > .card-body.item-card-body > table[class=table] > tbody > tr"
   )
     .map((index, element) => {
       let key = dom(element).find("> th").text().trim().toLowerCase().split(" ").join("_");
       let value = dom(element).find("> td").text().trim();
-
-      return { key, value };
+      return {[key] : value};
     })
-    .get();
+    .get();*/
+
+var properties = {};
+for (let element of dom(".container.container-ads > .row > .col-lg-6 > :nth-child(2) > .card-body.item-card-body > table[class=table] > tbody > tr")) {
+    let key = dom(element).find("> th").text().trim().toLowerCase().split(" ").join("_");
+    let value = dom(element).find("> td").text().trim();
+    properties[key] = value;
+}
 
   return { description, properties };
 }
@@ -90,42 +96,42 @@ async function getItemsGenerics() {
     let title = dom("title").text();
 
     if (title.split(" ")[0] == "Page" || page == 1) {
-      let names = dom("#table > tbody > tr")
+      let names = dom(".rd-table > tbody > tr")
         .find("> :nth-child(2) > a")
         .map((index, element) => {
           return dom(element).text().trim();
         })
         .get();
 
-      let images = dom("#table > tbody > tr")
+      let images = dom(".rd-table > tbody > tr")
         .find("> :nth-child(1) > a > img")
         .map((index, element) => {
           return `https://minecraftitemids.com${dom(element).attr("src")}`;
         })
         .get();
 
-      let urls = dom("#table > tbody > tr")
+      let urls = dom(".rd-table > tbody > tr")
         .find("> :nth-child(2) > a")
         .map((index, element) => {
           return `https://minecraftitemids.com${dom(element).attr("href")}`;
         })
         .get();
 
-      let ids = dom("#table > tbody > tr")
+      let ids = dom(".rd-table > tbody > tr")
         .find("> :nth-child(3)")
         .map((index, element) => {
           return dom(element).text().trim();
         })
         .get();
 
-      let legacy_ids = dom("#table > tbody > tr")
+      let legacy_ids = dom(".rd-table > tbody > tr")
         .find("> :nth-child(4)")
         .map((index, element) => {
           return dom(element).text().trim();
         })
         .get();
 
-      let numerical_ids = dom("#table > tbody > tr")
+      let numerical_ids = dom(".rd-table > tbody > tr")
         .find("> :nth-child(5)")
         .map((index, element) => {
           return dom(element).text().trim();
