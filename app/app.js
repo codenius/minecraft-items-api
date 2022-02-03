@@ -1,61 +1,40 @@
+const cheerio = require("cheerio");
 const express = require("express");
-const rateLimit = require("express-rate-limit");
-const app = express();
+const fs = require("fs");
+const rp = require("request-promise");
 
 require("dotenv").config();
-
-const limiter = rateLimit({
-  windowMs: 1000 * 60 * 60,
-  max: 1000,
-  message: "Limit reached of 1000 requests per hour.",
-});
-
-const updateLimiter = rateLimit({
-  windowMs: 1000 * 60 * 60,
-  max: 1,
-  message: "Limit reached of 1 request per hour.",
-});
-
 const port = process.env.port || 3000;
 
+const app = express();
+
 app.listen(port, () => {
-  console.clear();
-  console.log("Online.");
+  console.log(`Running on http://localhost:${port}`);
 });
 
-const cheerio = require("cheerio");
-const rp = require("request-promise");
-const fs = require("fs");
 
-app.get("/api/items", limiter, (req, res) => {
-  fs.readFile("cache.json", (err, data) => {
-    if (err) throw err;
-    let cache = JSON.parse(data);
-    res.json(cache);
+app.get("/api/items", (req, res) => {
+  fs.readFile("cache.json", async (err, data) => {
+    if (err) {
+      await getItemsGenerics();
+      var data = fs.readFileSync("cache.json")
+    };
+    let cache = JSON.parse(data)
+    res.json(cache)
   });
 });
 
-app.get("/api/items/:name", limiter, async (req, res) => {
+app.get("/api/items/:name", async (req, res) => {
   let itemName = req.params.name;
-
-  let infos = await getItemDetails("https://minecraftitemids.com/item/" + itemName.toLowerCase());
-
+  let infos = await getItemDetails(("https://minecraftitemids.com/item/" + itemName.toLowerCase()).replace(" ", "-"));
   res.json(infos);
 });
 
-app.get("/api/update", updateLimiter, async (req, res) => {
-  let items = await getItemsGenerics();
-
-  let cache = {
-    last_update: Date.now(),
-    data: items,
-  };
-
-  let data = JSON.stringify(cache);
-  fs.writeFileSync("cache.json", data);
-
+app.get("/api/update", async (req, res) => {
+  await getItemsGenerics();
   res.send("ok");
 });
+
 
 async function getItemDetails(endpoint) {
   let html = await rp(endpoint);
@@ -63,24 +42,17 @@ async function getItemDetails(endpoint) {
 
   let description = dom(".card-body.item-card-body > :nth-child(1) > p").text().trim();
 
-/*  let properties = dom(
-    ".container.container-ads > .row > .col-lg-6 > :nth-child(2) > .card-body.item-card-body > table[class=table] > tbody > tr"
-  )
-    .map((index, element) => {
-      let key = dom(element).find("> th").text().trim().toLowerCase().split(" ").join("_");
-      let value = dom(element).find("> td").text().trim();
-      return {[key] : value};
-    })
-    .get();*/
-
-var properties = {};
-for (let element of dom(".container.container-ads > .row > .col-lg-6 > :nth-child(2) > .card-body.item-card-body > table[class=table] > tbody > tr")) {
+  var properties = {};
+  for (let element of dom(".container.container-ads > .row > .col-lg-6 > :nth-child(2) > .card-body.item-card-body > table[class=table] > tbody > tr")) {
     let key = dom(element).find("> th").text().trim().toLowerCase().split(" ").join("_");
     let value = dom(element).find("> td").text().trim();
     properties[key] = value;
-}
+  }
 
-  return { description, properties };
+  return {
+    description,
+    properties
+  };
 }
 
 async function getItemsGenerics() {
@@ -96,6 +68,7 @@ async function getItemsGenerics() {
     let title = dom("title").text();
 
     if (title.split(" ")[0] == "Page" || page == 1) {
+      console.log(`Fetching page ${page}...`)
       let names = dom(".rd-table > tbody > tr")
         .find("> :nth-child(2) > a")
         .map((index, element) => {
@@ -103,10 +76,14 @@ async function getItemsGenerics() {
         })
         .get();
 
-      let images = dom(".rd-table > tbody > tr")
-        .find("> :nth-child(1) > a > img")
+      let images = dom(".rd-table > tbody > tr > :nth-child(1)")
         .map((index, element) => {
-          return `https://minecraftitemids.com${dom(element).attr("src")}`;
+          if (dom(element).find("> a > img").attr("src") == undefined) {
+            var image = "";
+          } else {
+            var image = "https://minecraftitemids.com" + dom(element).find("> a > img").attr("src");
+          };
+          return image;
         })
         .get();
 
@@ -172,6 +149,14 @@ async function getItemsGenerics() {
       exists = false;
     }
   } while (exists);
+  
+  let cache = {
+    last_update: Date.now(),
+    data: items,
+  };
 
-  return items;
+  let data = JSON.stringify(cache);
+  fs.writeFileSync("cache.json", data);
+
+  console.log("Done.")
 }
