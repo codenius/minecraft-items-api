@@ -3,6 +3,9 @@ const express = require("express");
 const fs = require("fs");
 const rp = require("request-promise");
 
+// getItemsGenerics()
+setInterval(getItemsGenerics, 1000 * 60 * 60 * 1);
+
 require("dotenv").config();
 const port = process.env.port || 3000;
 
@@ -149,10 +152,10 @@ async function getItemsGenerics() {
       exists = false;
     }
   } while (exists);
-  
+
   let cache = {
     last_update: Date.now(),
-    data: items,
+    items,
   };
 
   let data = JSON.stringify(cache);
